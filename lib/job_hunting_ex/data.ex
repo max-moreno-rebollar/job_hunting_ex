@@ -23,7 +23,7 @@ defmodule JobHuntingEx.Data do
     IO.puts("starting getting embeddings")
 
     body = %{
-      "model" => "qwen/qwen3-embedding-8b",
+      "model" => "baai/bge-m3",
       "input" => Enum.map(documents, fn {_url, html} -> html end)
     }
 
@@ -32,7 +32,7 @@ defmodule JobHuntingEx.Data do
         url: "https://openrouter.ai/api/v1/embeddings",
         headers: [
           authorization:
-            "Bearer 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",
+            "Bearer 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",
           content_type: "application/json"
         ],
         json: body
