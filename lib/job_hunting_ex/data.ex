@@ -42,11 +42,34 @@ defmodule JobHuntingEx.Data do
 
     Enum.zip(documents, Enum.map(response.body["data"], & &1["embedding"]))
     |> Enum.map(fn {{url, html}, embedding} ->
-      %{"url" => url, "description" => html, "embeddings" => embedding}
+      %{
+        "url" => url,
+        "description" => html,
+        "embeddings" => embedding
+      }
     end)
   end
 
-  def write_all(embeddings) do
+  def extract_years_of_experience(html) do
+    patterns = [
+      ~r/(\d+)\+?\s*years?\s+of\s+experience/i,
+      ~r/(\d+)\+?\s*years?\s+experience/i,
+      ~r/(\d+)\+?\s*years?\s+professional\s+experience/i,
+      ~r/(\d+)\+?\s*years?\s+relevant\s+experience/i,
+      ~r/minimum\s+of\s+(\d+)\s*years?/i,
+      ~r/at\s+least\s+(\d+)\s*years?/i
+    ]
+
+    years =
+      Enum.flat_map(patterns, fn pattern ->
+        Regex.scan(pattern, html)
+        |> Enum.map(fn [_, num] -> String.to_integer(num) end)
+      end)
+
+    case years do
+      [] -> nil
+      list -> Enum.min(list)
+    end
   end
 
   def process(params) do
@@ -69,6 +92,10 @@ defmodule JobHuntingEx.Data do
     )
     |> Enum.map(fn {:ok, result} -> result end)
     |> List.flatten()
+    |> then(fn {url, html, embeddings} ->
+      min_yoe = extract_years_of_experience(html)
+      {url, html, embeddings, min_yoe}
+    end)
     |> Enum.each(&create_listing(&1))
   end
 end
