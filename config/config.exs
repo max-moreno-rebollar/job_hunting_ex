@@ -8,3 +8,5 @@ config :job_hunting_ex, Jobs.Repo,
   password: "",
   hostname: "localhost",
   types: JobHuntingEx.PostgrexTypes
+
+import_config "runtime.exs"

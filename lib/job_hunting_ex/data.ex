@@ -33,8 +33,7 @@ defmodule JobHuntingEx.Data do
       Req.post!(
         url: "https://openrouter.ai/api/v1/embeddings",
         headers: [
-          authorization:
-            "Bearer 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",
+          authorization: "Bearer #{Application.get_env(:job_hunting_ex, :openrouter_api_key)}",
           content_type: "application/json"
         ],
         json: body
