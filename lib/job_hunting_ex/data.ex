@@ -4,6 +4,8 @@ defmodule JobHuntingEx.Data do
 
   alias Jobs.Repo.Listing
 
+  defstruct [:url, :html, :description, :classification, :embeddings, :changeset, :error]
+
   defp polite_sleep do
     :timer.sleep(Enum.random([1_000, 2_000, 3_000]))
   end
@@ -19,15 +21,37 @@ defmodule JobHuntingEx.Data do
     end
   end
 
-  @spec get_html(String.t()) :: String.t()
-  defp get_html(url) do
-    with {:ok, response} <- Req.get(url),
-         {:ok, html} <- Floki.parse_document(response.body) do
-      Logger.info("Retrieved html for #{url}")
-      Floki.find(html, "[class^='job-detail-description']") |> List.first() |> Floki.text()
+  @spec extract_description(String.t()) :: {:ok, String.t()} | {:error, String.t()}
+  def extract_description(html_string) do
+    case Floki.parse_document(html_string) do
+      {:ok, document} ->
+        description =
+          document
+          |> Floki.find("[class^='job-detail-description']")
+          |> List.first()
+          |> Floki.text()
+
+        {:ok, description}
+
+      {:error, err} ->
+        {:error, err}
     end
   end
 
+  @spec fetch_html(String.t()) :: {:ok, String.t()} | {:error, String.t()}
+  defp fetch_html(url) do
+    with {:ok, response} <- Req.get(url),
+         {:ok, description} <- extract_description(response.body) do
+      case description do
+        "" -> {:error, "Description could not be found"}
+        _ -> {:ok, description}
+      end
+    else
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  @spec get_embeddings(List.t(Listing.t())) :: List.t(Listing.t())
   defp get_embeddings(documents) do
     body = %{
       "model" => "baai/bge-m3",
@@ -140,14 +164,23 @@ defmodule JobHuntingEx.Data do
       |> Task.async_stream(
         fn url ->
           polite_sleep()
-          html = get_html(url)
-          {url, html}
+          {url, fetch_html(url)}
         end,
         max_concurrency: 2,
         ordered: false,
-        timeout: 10_000
+        timeout: 10_000,
+        on_timeout: :kill_task
       )
-      |> Stream.map(fn {:ok, pair} -> pair end)
+      |> Stream.flat_map(fn
+        {:ok, {url, {:ok, html}}} ->
+          [{url, html}]
+
+        {:ok, {_url, {:error, _}}} ->
+          []
+
+        {:exit, _} ->
+          []
+      end)
       |> Stream.chunk_every(25)
       |> Task.async_stream(fn batch -> get_embeddings(batch) end,
         max_concurrency: 3,
@@ -164,7 +197,8 @@ defmodule JobHuntingEx.Data do
       |> Enum.each(&create_listing(&1))
     else
       {:error, err} ->
-        {:error, err}
+        Logger.error("Could not query Dice MCP", reason: err)
+        {:error, "Failled on start"}
     end
   end
 end

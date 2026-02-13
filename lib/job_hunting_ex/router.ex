@@ -1,14 +1,23 @@
 defmodule JobHuntingEx.Router do
   use Plug.Router
 
-  plug(Plug.Logger)
+  plug(Plug.Logger, log: :debug)
   plug(:match)
   plug(:dispatch)
 
-  get "/hello" do
+  get "/home" do
+    html = render_template("home.html.eex", title: "Query")
+
     conn
     |> put_resp_content_type("text/html")
-    |> send_resp(200, render_template("index.eex", assigns: [title: "Welcome Page"]))
+    |> send_resp(200, html)
+  end
+
+  post "/home" do
+    IO.inspect(conn.body_params)
+
+    conn
+    |> send_resp(200, "nice")
   end
 
   match _ do

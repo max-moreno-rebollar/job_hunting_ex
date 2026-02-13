@@ -4,7 +4,10 @@
   <title><%= @title %></title>
 </head>
 <body>
-  <h1>Welcome to Plug.Router!</h1>
+  <title><%= @title %></title>
   <p>This page was rendered dynamically.</p>
+  <form action="submit" method="post">
+    <input type="text" name="keyword"/>
+  </form>
 </body>
 </html>

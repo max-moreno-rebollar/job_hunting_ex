@@ -1,6 +1,13 @@
 defmodule Jobs.Listing do
   use Ecto.Schema
 
+  @type t :: %__MODULE__{
+          url: String.t(),
+          description: String.t(),
+          embeddings: Pgvector.Ecto.Vector.type(),
+          years_of_experience: integer()
+        }
+
   schema "listings" do
     field :url, :string
     field :description, :string
