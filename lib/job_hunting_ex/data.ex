@@ -14,6 +14,7 @@ defmodule JobHuntingEx.Data do
     end
   end
 
+  @spec get_html(String.t()) :: String.t()
   def get_html(url) do
     html_string = Req.get!(url).body
     {:ok, html} = Floki.parse_document(html_string)
@@ -99,7 +100,7 @@ defmodule JobHuntingEx.Data do
         |> Jason.decode!()
         |> Map.get("minimum_years_of_experience")
 
-      error ->
+      _error ->
         -1
     end
   end
