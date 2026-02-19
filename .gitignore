@@ -35,3 +35,7 @@ job_hunting_ex-*.tar
 npm-debug.log
 /assets/node_modules/
 
+
+# Ignore .DS_store
+*.DS_store
+

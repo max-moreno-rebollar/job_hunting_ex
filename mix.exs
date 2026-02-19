@@ -65,7 +65,10 @@ defmodule JobHuntingEx.MixProject do
       {:gettext, "~> 1.0"},
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.2.0"},
-      {:bandit, "~> 1.5"}
+      {:bandit, "~> 1.5"},
+      {:anubis_mcp, "~> 0.17"},
+      {:floki, "~> 0.38.0"},
+      {:pgvector, "~> 0.3.0"}
     ]
   end
 
