@@ -1,6 +1,6 @@
 defmodule JobHuntingEx.Queries.Data do
   require Logger
-  import JobHuntingEx.Repo
+  alias JobHuntingEx.Jobs.Listings
 
   defstruct [:url, :html, :description, :classification, :embeddings, :changeset, :error]
 
@@ -49,8 +49,7 @@ defmodule JobHuntingEx.Queries.Data do
     end
   end
 
-  @spec get_embeddings(List.t(Listing.t())) :: List.t(Listing.t())
-  defp get_embeddings(documents) do
+  def get_embeddings(documents) do
     body = %{
       "model" => "baai/bge-m3",
       "input" => Enum.map(documents, fn {_url, html} -> html end)
@@ -60,7 +59,7 @@ defmodule JobHuntingEx.Queries.Data do
       Req.post!(
         url: "https://openrouter.ai/api/v1/embeddings",
         headers: [
-          authorization: "Bearer #{Application.get_env(:job_hunting_ex, :openrouter_api_key)}",
+          authorization: "Bearer ",
           content_type: "application/json"
         ],
         json: body
@@ -78,31 +77,28 @@ defmodule JobHuntingEx.Queries.Data do
 
   def fetch_years_of_exerience(html) do
     body = %{
-      "model" => "google/gemma-3-27b-it",
+      "model" => "openai/gpt-oss-20b",
       "messages" => [
         %{
-          "role" => "system",
-          "content" =>
-            "You are given a job listing. Determine what the minimum number of years of experience that would qualify someone for this role. Often you will see jobs requiring either a masters and some number of years of experience or a bachelors with more required years of experience. Take the years of expererience as if I didn't have a masters.Return the answer or -1 if not found"
-        },
-        %{
           "role" => "user",
-          "content" => html
+          "content" =>
+            "You are given a job listing. Determine what the minimum number of years of experience that would qualify someone for this role. Often you will see jobs requiring either a masters and some number of years of experience or a bachelors with more required years of experience. Take the years of expererience as if the applicant doesn't have a masters. Return the answer or -1 if not found. Here is the listing: #{html}"
         }
       ],
       "response_format" => %{
         "type" => "json_schema",
         "json_schema" => %{
           "name" => "listing",
-          "strict" => "true",
+          "strict" => true,
           "schema" => %{
             "type" => "object",
             "properties" => %{
               "minimum_years_of_experience" => %{
-                "type" => "number",
-                "description" => "The minimum years of experience required for the job"
+                "type" => "number"
               }
-            }
+            },
+            "required" => ["minimum_years_of_experience"],
+            "additionalProperties" => false
           }
         }
       }
@@ -110,11 +106,8 @@ defmodule JobHuntingEx.Queries.Data do
 
     response =
       Req.post(
-        url: "https://openrouter.ai/api/v1/chat/completions",
-        headers: [
-          authorization: "Bearer #{Application.get_env(:job_hunting_ex, :openrouter_api_key)}",
-          content_type: "application/json"
-        ],
+        url: "https://api.groq.com/openai/v1/chat/completions",
+        auth: {:bearer, ""},
         json: body
       )
 
@@ -130,29 +123,6 @@ defmodule JobHuntingEx.Queries.Data do
 
       _error ->
         -1
-    end
-  end
-
-  def extract_years_of_experience(html) do
-    patterns = [
-      ~r/(\d+)\+?\s*years?\s+of\s+experience/i,
-      ~r/(\d+)\+?\s*years?\s+experience/i,
-      ~r/(\d+)\+?\s*years?\s+professional\s+experience/i,
-      ~r/(\d+)\+?\s*years?\s+relevant\s+experience/i,
-      ~r/minimum\s+of\s+(\d+)\s*years?/i,
-      ~r/at\s+least\s+(\d+)\s*years?/i,
-      ~r/(\d+)\+?\s*years?\b/i
-    ]
-
-    years =
-      Enum.flat_map(patterns, fn pattern ->
-        Regex.scan(pattern, html)
-        |> Enum.map(fn [_, num] -> String.to_integer(num) end)
-      end)
-
-    case years do
-      [] -> nil
-      list -> Enum.max(list)
     end
   end
 
@@ -180,8 +150,11 @@ defmodule JobHuntingEx.Queries.Data do
           []
       end)
       |> Stream.chunk_every(25)
-      |> Task.async_stream(fn batch -> get_embeddings(batch) end,
-        max_concurrency: 3,
+      |> Task.async_stream(
+        fn batch ->
+          get_embeddings(batch)
+        end,
+        max_concurrency: 2,
         ordered: false,
         timeout: 60_000
       )
@@ -189,13 +162,13 @@ defmodule JobHuntingEx.Queries.Data do
       |> List.flatten()
       |> Enum.map(fn listing ->
         min_yoe = fetch_years_of_exerience(listing["description"])
-
+        :timer.sleep(500)
         Map.put(listing, "years_of_experience", min_yoe)
       end)
-      |> Enum.each(&create_listing(&1))
+      |> Enum.each(&Listings.create(&1))
     else
       {:error, err} ->
-        Logger.error("Could not query Dice MCP", reason: err)
+        Logger.error("Could not query Dice MCP", "reason: #{err}")
         {:error, "Failled on start"}
     end
   end
