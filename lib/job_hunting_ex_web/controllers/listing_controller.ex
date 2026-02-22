@@ -1,7 +1,7 @@
 defmodule JobHuntingExWeb.ListingController do
   use JobHuntingExWeb, :controller
 
-  def show(conn, params) do
+  def show(conn, _params) do
     render(conn, :home)
   end
 end
