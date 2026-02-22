@@ -19,6 +19,8 @@ defmodule JobHuntingExWeb.Router do
 
     # get "/", PageController, :home
 
+    get "/listing/show", ListingController, :show
+
     live "/new", QueryLive.New
   end
 

@@ -10,7 +10,17 @@ defmodule JobHuntingEx.Queries.Data do
 
   @spec fetch_urls(String.t()) :: list(String.t())
   defp fetch_urls(params) do
-    with {:ok, %{result: payload}} <- JobHuntingEx.McpClient.call_tool("search_jobs", params),
+    static_params = %{
+      "radius_unit" => "mi",
+      "jobs_per_page" => 10,
+      "posted_date" => "ONE",
+      "workplace_types" => ["On-Site", "Hybrid"]
+    }
+
+    query_params = Map.merge(params, static_params)
+
+    with {:ok, %{result: payload}} <-
+           JobHuntingEx.McpClient.call_tool("search_jobs", query_params),
          %{"content" => [%{"text" => text} | _]} <- payload,
          {:ok, %{"data" => jobs}} <- Jason.decode(text) do
       {:ok, Enum.map(jobs, fn job -> job["detailsPageUrl"] end)}
@@ -59,8 +69,7 @@ defmodule JobHuntingEx.Queries.Data do
       Req.post!(
         url: "https://openrouter.ai/api/v1/embeddings",
         headers: [
-          authorization:
-            "Bearer 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",
+          authorization: "Bearer ",
           content_type: "application/json"
         ],
         json: body
@@ -108,7 +117,7 @@ defmodule JobHuntingEx.Queries.Data do
     response =
       Req.post(
         url: "https://api.groq.com/openai/v1/chat/completions",
-        auth: {:bearer, "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"},
+        auth: {:bearer, ""},
         json: body
       )
 
@@ -129,55 +138,64 @@ defmodule JobHuntingEx.Queries.Data do
 
   # Changes to working with a struct and constructing a list of listings struct
   def process(params) do
-    with {:ok, urls} <- fetch_urls(params) do
-      urls
-      |> Task.async_stream(
-        fn url ->
-          polite_sleep()
-          {url, fetch_html(url)}
-        end,
-        max_concurrency: 2,
-        ordered: false,
-        timeout: 10_000,
-        on_timeout: :kill_task
-      )
-      |> Stream.flat_map(fn
-        {:ok, {url, {:ok, html}}} ->
-          [{url, html}]
+    _myoe = params["minimum_years_of_experience"]
 
-        {:ok, {_url, {:error, _}}} ->
-          []
+    params_modified =
+      Map.filter(params, fn {key, _value} -> key != "minimum_years_of_experience" end)
 
-        {:exit, _} ->
-          []
-      end)
-      |> Stream.chunk_every(25)
-      |> Task.async_stream(
-        fn batch ->
-          get_embeddings(batch)
-        end,
-        max_concurrency: 2,
-        ordered: false,
-        timeout: 60_000
-      )
-      |> Enum.map(fn {:ok, result} -> result end)
-      |> List.flatten()
-      |> Enum.map(fn listing ->
-        min_yoe = fetch_years_of_exerience(listing["description"])
-        :timer.sleep(500)
-        Map.put(listing, "years_of_experience", min_yoe)
-      end)
-      |> Enum.map(&Listings.create(&1))
-      |> Enum.flat_map(fn
-        {:ok, struct} -> [struct]
-        {:error, struct} -> [struct]
-      end)
-    else
-      {:error, err} ->
-        Logger.error("Could not query Dice MCP", "reason: #{err}")
-        {:error, "Failled on start"}
-    end
+    result =
+      with {:ok, urls} <- fetch_urls(params_modified) do
+        urls
+        |> Task.async_stream(
+          fn url ->
+            polite_sleep()
+            {url, fetch_html(url)}
+          end,
+          max_concurrency: 2,
+          ordered: false,
+          timeout: 10_000,
+          on_timeout: :kill_task
+        )
+        |> Stream.flat_map(fn
+          {:ok, {url, {:ok, html}}} ->
+            [{url, html}]
 
-    {:ok, "done"}
+          {:ok, {_url, {:error, _}}} ->
+            []
+
+          {:exit, _} ->
+            []
+        end)
+        |> Stream.chunk_every(25)
+        |> Task.async_stream(
+          fn batch ->
+            get_embeddings(batch)
+          end,
+          max_concurrency: 2,
+          ordered: false,
+          timeout: 60_000
+        )
+        |> Enum.map(fn {:ok, result} -> result end)
+        |> List.flatten()
+        |> Enum.map(fn listing ->
+          min_yoe = fetch_years_of_exerience(listing["description"])
+          :timer.sleep(500)
+          Map.put(listing, "years_of_experience", min_yoe)
+        end)
+        |> Enum.map(&Listings.create(&1))
+        |> Enum.flat_map(fn
+          {:ok, struct} -> [struct]
+          # throw away all erros for now
+          {:error, _struct} -> []
+        end)
+
+        # just going to return everything for now
+      else
+        {:error, err} ->
+          Logger.error("Could not query Dice MCP", "reason: #{err}")
+          {:error, "Failled on start"}
+      end
+
+    result
   end
 end
