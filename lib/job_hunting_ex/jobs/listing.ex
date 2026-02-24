@@ -10,6 +10,8 @@ defmodule JobHuntingEx.Jobs.Listing do
     field :years_of_experience, :integer
     field :location, :string
     field :distance, :integer
+    field :skills, {:array, :string}
+    field :summary, :string
 
     timestamps(type: :utc_datetime)
   end
@@ -24,7 +26,9 @@ defmodule JobHuntingEx.Jobs.Listing do
       :embeddings,
       :years_of_experience,
       :location,
-      :distance
+      :distance,
+      :skills,
+      :summary
     ])
     |> validate_required([:url, :description, :years_of_experience])
   end
