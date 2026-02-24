@@ -92,7 +92,7 @@ defmodule JobHuntingEx.Queries.Data do
         %{
           "role" => "user",
           "content" =>
-            "You are given a job listing. Determine what the minimum number of years of experience that would qualify someone for this role. Often you will see jobs requiring either a masters and some number of years of experience or a bachelors with more required years of experience. Take the years of expererience as if the applicant doesn't have a masters. You are allowed to make an educated guess on the years of experience based on the title. If it says senior then you can infer the required years of experience is 5 etc. Return the answer or -1 if not found. As well, determine what are the top 5 most needed skills for this role. If there are less than 5 skills needed that's okay. Also provide a two sentence summary of the description. Pay close attention to what you would actually be working on in the job like particular teams. Here is the listing: #{html}"
+            "You are given a job listing. Determine what the minimum number of years of experience that would qualify someone for this role. Often you will see jobs requiring either a masters and some number of years of experience or a bachelors with more required years of experience. Take the years of expererience as if the applicant doesn't have a masters. You are allowed to make an educated guess on the years of experience based on the title. If it says senior then you can infer the required years of experience is 5 etc. Return the answer or -1 if not found. As well, determine what are the top 5 most needed skills for this role are and limit them to 1 or two words. If there are less than 5 skills needed that's okay. Also provide a one sentence summary of the description. Pay close attention to what you would actually be working on in the job like particular teams. Here is the listing: #{html}"
         }
       ],
       "response_format" => %{
@@ -160,9 +160,9 @@ defmodule JobHuntingEx.Queries.Data do
 
       _error ->
         %{
-          minimum_years_of_experience: -1,
-          skills: [],
-          summary: ""
+          "minimum_years_of_experience" => -1,
+          "skills" => [],
+          "summary" => ""
         }
     end
   end
@@ -210,12 +210,13 @@ defmodule JobHuntingEx.Queries.Data do
         |> List.flatten()
         |> Enum.map(fn listing ->
           job_data = fetch_job_data(listing["description"])
+          IO.inspect(job_data)
           :timer.sleep(500)
 
           listing
-          |> Map.put("years_of_experience", job_data.minimum_years_of_experience)
-          |> Map.put("skills", job_data.skills)
-          |> Map.put("summary", job_data.summary)
+          |> Map.put("years_of_experience", job_data["minimum_years_of_experience"])
+          |> Map.put("skills", job_data["skills"])
+          |> Map.put("summary", job_data["summary"])
         end)
         |> Enum.map(&Listings.create(&1))
         |> Enum.flat_map(fn
