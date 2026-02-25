@@ -140,21 +140,21 @@ defmodule JobHuntingEx.Queries.Data do
         |> Jason.decode!()
         |> case do
           %{
-            "minimum_years_of_experience" => years,
-            "skills" => skills,
-            "summary" => summary
+            minimum_years_of_experience: years,
+            skills: skills,
+            summary: summary
           } ->
             %{
-              "minimum_years_of_experience" => years,
-              "skills" => skills,
-              "summary" => summary
+              minimum_years_of_experience: years,
+              skills: skills,
+              summary: summary
             }
 
           _other ->
             %{
-              "minimum_years_of_experience" => -1,
-              "skills" => [],
-              "summary" => ""
+              minimum_years_of_experience: -1,
+              skills: "",
+              summary: ""
             }
         end
 
@@ -214,14 +214,14 @@ defmodule JobHuntingEx.Queries.Data do
           :timer.sleep(500)
 
           listing
-          |> Map.put("years_of_experience", job_data["minimum_years_of_experience"])
-          |> Map.put("skills", job_data["skills"])
-          |> Map.put("summary", job_data["summary"])
+          |> Map.put("years_of_experience", job_data.minimum_years_of_experience)
+          |> Map.put("skills", job_data.skills)
+          |> Map.put("summary", job_data.summary)
         end)
         |> Enum.map(&Listings.create(&1))
         |> Enum.flat_map(fn
           {:ok, struct} -> [struct]
-          # throw away all erros for now
+          # throw away all errors for now
           {:error, _struct} -> []
         end)
 
