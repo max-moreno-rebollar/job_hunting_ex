@@ -16,7 +16,7 @@ defmodule JobHuntingEx.Queries.Data do
   ]
 
   defp polite_sleep do
-    :timer.sleep(Enum.random([1_000, 2_000, 3_000]))
+    :timer.sleep(Enum.random([1_000, 1_500, 1_750]))
   end
 
   @spec fetch_urls(String.t()) :: list(String.t())
@@ -80,7 +80,7 @@ defmodule JobHuntingEx.Queries.Data do
       Req.post(
         url: "https://openrouter.ai/api/v1/embeddings",
         headers: [
-          authorization: "Bearer ",
+          authorization: "Bearer #{Application.fetch_env!(:job_hunting_ex, :openrouter_key)}",
           content_type: "application/json"
         ],
         json: body
@@ -139,7 +139,7 @@ defmodule JobHuntingEx.Queries.Data do
     response =
       Req.post(
         url: "https://api.groq.com/openai/v1/chat/completions",
-        auth: {:bearer, ""},
+        auth: {:bearer, "#{Application.fetch_env!(:job_hunting_ex, :groq_key)}"},
         json: body
       )
 
