@@ -35,30 +35,33 @@ defmodule JobHuntingExWeb.Layouts do
 
   def app(assigns) do
     ~H"""
-    <header class="navbar px-4 sm:px-6 lg:px-8">
-      <div class="flex-1">
-        <a href="/new" class="btn btn-ghost">
-          Home
-        </a>
+    <header class="sticky top-0 z-50 bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex justify-between items-center h-16">
+          <div class="flex-shrink-0">
+            <a
+              href="/"
+              class="text-xl font-semibold text-gray-900 tracking-tight hover:text-gray-700 transition-colors"
+            >
+              Job Lens
+            </a>
+          </div>
+          <nav class="flex items-center space-x-8">
+            <a
+              href="/"
+              class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Home
+            </a>
+            <a
+              href="/new"
+              class="text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
+            >
+              Search
+            </a>
+          </nav>
+        </div>
       </div>
-      <%!-- <div class="flex-none"> --%>
-      <%!--   <ul class="flex flex-column px-1 space-x-4 items-center"> --%>
-      <%!--     <li> --%>
-      <%!--       <a href="https://phoenixframework.org/" class="btn btn-ghost">Website</a> --%>
-      <%!--     </li> --%>
-      <%!--     <li> --%>
-      <%!--       <a href="https://github.com/phoenixframework/phoenix" class="btn btn-ghost">GitHub</a> --%>
-      <%!--     </li> --%>
-      <%!--     <li> --%>
-      <%!--       <.theme_toggle /> --%>
-      <%!--     </li> --%>
-      <%!--     <li> --%>
-      <%!--       <a href="https://hexdocs.pm/phoenix/overview.html" class="btn btn-primary"> --%>
-      <%!--         Get Started <span aria-hidden="true">&rarr;</span> --%>
-      <%!--       </a> --%>
-      <%!--     </li> --%>
-      <%!--   </ul> --%>
-      <%!-- </div> --%>
     </header>
 
     <main class="px-4 py-20 sm:px-6 lg:px-8">

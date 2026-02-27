@@ -17,7 +17,7 @@ defmodule JobHuntingExWeb.Router do
   scope "/", JobHuntingExWeb do
     pipe_through :browser
 
-    # get "/", PageController, :home
+    get "/", PageController, :home
 
     get "/listing/show", ListingController, :show
 
