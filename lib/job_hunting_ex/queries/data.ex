@@ -23,7 +23,7 @@ defmodule JobHuntingEx.Queries.Data do
   defp fetch_urls(params) do
     static_params = %{
       "radius_unit" => "mi",
-      "jobs_per_page" => 10,
+      "jobs_per_page" => 100,
       "posted_date" => "ONE",
       "workplace_types" => ["On-Site", "Hybrid"]
     }
@@ -80,7 +80,7 @@ defmodule JobHuntingEx.Queries.Data do
       Req.post(
         url: "https://openrouter.ai/api/v1/embeddings",
         headers: [
-          authorization: "Bearer #{Application.fetch_env!(:job_hunting_ex, :openrouter_key)}",
+          authorization: "Bearer #{System.get_env("OPENROUTER_API_KEY")}",
           content_type: "application/json"
         ],
         json: body
@@ -107,7 +107,7 @@ defmodule JobHuntingEx.Queries.Data do
         %{
           "role" => "user",
           "content" =>
-            "You are given a job listing. Determine what the minimum number of years of experience that would qualify someone for this role. Often you will see jobs requiring either a masters and some number of years of experience or a bachelors with more required years of experience. Take the years of expererience as if the applicant doesn't have a masters. You are allowed to make an educated guess on the years of experience based on the title. If it says senior then you can infer the required years of experience is 5 etc. Return the answer or -1 if not found. As well, determine what are the top 5 most needed skills for this role are and limit them to 1 or two words. If there are less than 5 skills needed that's okay. Also provide a one sentence summary of the description. Pay close attention to what you would actually be working on in the job like particular teams. Here is the listing: #{description}"
+            "You are given a job listing. Determine what the minimum number of years of experience that would qualify someone for this role. Often you will see jobs requiring either a masters and some number of years of experience or a bachelors with more required years of experience. Take the years of expererience as if the applicant doesn't have a masters. You are allowed to make an educated guess on the years of experience based on the title. Overall, you should return the years of experience as a whole number number rounding up. If it says senior then you can infer the required years of experience is 5 etc. Return the answer or -1 if not found. As well, determine what are the top 5 most needed skills for this role are and limit them to 1 or two words. If there are less than 5 skills needed that's okay. Also provide a one sentence summary of the description. Pay close attention to what you would actually be working on in the job like particular teams. Here is the listing: #{description}"
         }
       ],
       "response_format" => %{
@@ -139,7 +139,7 @@ defmodule JobHuntingEx.Queries.Data do
     response =
       Req.post(
         url: "https://api.groq.com/openai/v1/chat/completions",
-        auth: {:bearer, "#{Application.fetch_env!(:job_hunting_ex, :groq_key)}"},
+        auth: {:bearer, "#{System.get_env("GROQ_API_KEY")}"},
         json: body
       )
 
@@ -195,7 +195,7 @@ defmodule JobHuntingEx.Queries.Data do
   end
 
   def process(params) do
-    _myoe = params["minimum_years_of_experience"]
+    {myoe, _remainder} = Integer.parse(params["minimum_years_of_experience"])
 
     params_modified =
       Map.filter(params, fn {key, _value} -> key != "minimum_years_of_experience" end)
@@ -243,7 +243,7 @@ defmodule JobHuntingEx.Queries.Data do
           on_timeout: :kill_task
         )
         |> Stream.flat_map(&handle_result(&1))
-        |> Stream.chunk_every(25)
+        |> Stream.chunk_every(20)
         |> Task.async_stream(
           fn batch ->
             case get_embeddings(batch) do
@@ -263,12 +263,12 @@ defmodule JobHuntingEx.Queries.Data do
         )
         |> Stream.flat_map(&handle_result(&1))
         |> Enum.map(fn data -> Listings.create(Map.from_struct(data)) end)
-        |> IO.inspect()
         |> Enum.flat_map(fn
           {:ok, struct} -> [struct]
           # throw away all errors for now
           {:error, _struct} -> []
         end)
+        |> Enum.filter(fn listing -> listing.years_of_experience <= myoe + 1 end)
       else
         {:error, err} ->
           Logger.error("Could not query Dice MCP", "reason: #{err}")
