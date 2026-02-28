@@ -24,7 +24,7 @@ defmodule JobHuntingEx.Queries.Data do
     static_params = %{
       "radius_unit" => "mi",
       "jobs_per_page" => 100,
-      "posted_date" => "ONE",
+      "posted_date" => "THREE",
       "workplace_types" => ["On-Site", "Hybrid"]
     }
 
@@ -38,6 +38,22 @@ defmodule JobHuntingEx.Queries.Data do
     else
       {:error, reason} -> {:error, reason}
     end
+  end
+
+  def test(params) do
+    static_params = %{
+      "radius_unit" => "mi",
+      "jobs_per_page" => 100,
+      "posted_date" => "THREE",
+      "workplace_types" => ["On-Site", "Hybrid"]
+    }
+
+    query_params = Map.merge(params, static_params)
+
+    {:ok, %{result: payload}} =
+      JobHuntingEx.McpClient.call_tool("search_jobs", query_params)
+
+    payload
   end
 
   @spec extract_description(String.t()) :: {:ok, String.t()} | {:error, String.t()}
@@ -186,11 +202,13 @@ defmodule JobHuntingEx.Queries.Data do
     Enum.filter(list, fn data -> data.error == nil end)
   end
 
-  defp handle_result({:ok, %{error: _reason} = _data}) do
+  defp handle_result({:ok, %{error: reason} = _data}) do
+    Logger.error("Failure: #{reason}")
     []
   end
 
-  defp handle_result({:exit, _reason}) do
+  defp handle_result({:exit, reason}) do
+    Logger.error("Exit: #{reason}")
     []
   end
 

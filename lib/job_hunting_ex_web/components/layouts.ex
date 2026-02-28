@@ -41,8 +41,9 @@ defmodule JobHuntingExWeb.Layouts do
           <div class="flex-shrink-0">
             <a
               href="/"
-              class="text-xl font-semibold text-gray-900 tracking-tight hover:text-gray-700 transition-colors"
+              class="inline-flex items-center gap-2 text-xl font-semibold text-gray-900 tracking-tight hover:text-gray-700 transition-colors"
             >
+              <.icon name="hero-magnifying-glass" class="w-5 h-5" />
               Job Lens
             </a>
           </div>
