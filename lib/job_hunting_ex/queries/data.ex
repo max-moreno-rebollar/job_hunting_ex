@@ -19,19 +19,9 @@ defmodule JobHuntingEx.Queries.Data do
     :timer.sleep(Enum.random([1_000, 1_500, 1_750]))
   end
 
-  @spec fetch_urls(String.t()) :: list(String.t())
   defp fetch_urls(params) do
-    static_params = %{
-      "radius_unit" => "mi",
-      "jobs_per_page" => 100,
-      "posted_date" => "THREE",
-      "workplace_types" => ["On-Site", "Hybrid"]
-    }
-
-    query_params = Map.merge(params, static_params)
-
     with {:ok, %{result: payload}} <-
-           JobHuntingEx.McpClient.call_tool("search_jobs", query_params),
+           JobHuntingEx.McpClient.call_tool("search_jobs", params),
          %{"content" => [%{"text" => text} | _]} <- payload,
          # TODO: handle case where jason.decode will fail and return {:error, reason}
          {:ok, %{"data" => jobs}} <- Jason.decode(text) do
@@ -225,17 +215,32 @@ defmodule JobHuntingEx.Queries.Data do
 
   def process(params) do
     IO.inspect(params)
+
+    static_params = %{
+      "radius_unit" => "mi",
+      "jobs_per_page" => 100,
+      "posted_date" => "THREE"
+    }
+
     {min_yoe, _remainder} = Integer.parse(params["minimum_years_of_experience"])
     {max_yoe, _remainder} = Integer.parse(params["maximum_years_of_experience"])
+
+    static_params =
+      if params["remote?"] do
+        Map.put(static_params, "workplace_types", ["On-Site", "Hybrid", "Remote"])
+      else
+        Map.put(static_params, "workplace_types", ["On-Site", "Hybrid"])
+      end
 
     params_modified =
       Map.filter(params, fn {key, _value} -> key != "minimum_years_of_experience" end)
       |> Map.filter(fn {key, _value} -> key != "maximum_years_of_experience" end)
+      |> Map.filter(fn {key, _value} -> key != "remote?" end)
 
-    IO.inspect(params_modified)
+    params_merged = Map.merge(static_params, params_modified)
 
     result =
-      with {:ok, urls} <- fetch_urls(params_modified) do
+      with {:ok, urls} <- fetch_urls(params_merged) do
         urls
         |> Enum.map(fn url -> %Data{url: url} end)
         |> Task.async_stream(

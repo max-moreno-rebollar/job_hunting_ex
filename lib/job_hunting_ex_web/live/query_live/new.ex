@@ -70,6 +70,11 @@ defmodule JobHuntingExWeb.QueryLive.New do
                   placeholder="e.g. 15"
                 />
               </div>
+              <.input
+                field={@form[:remote?]}
+                type="checkbox"
+                label="Include remote jobs"
+              />
             </div>
 
             <.button
