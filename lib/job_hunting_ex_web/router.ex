@@ -17,11 +17,7 @@ defmodule JobHuntingExWeb.Router do
   scope "/", JobHuntingExWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
-
-    get "/listing/show", ListingController, :show
-
-    live "/new", QueryLive.New
+    live "/", QueryLive.New
   end
 
   # Other scopes may use custom stacks.

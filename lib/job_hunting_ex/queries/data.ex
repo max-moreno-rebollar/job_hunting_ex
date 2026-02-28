@@ -33,6 +33,7 @@ defmodule JobHuntingEx.Queries.Data do
     with {:ok, %{result: payload}} <-
            JobHuntingEx.McpClient.call_tool("search_jobs", query_params),
          %{"content" => [%{"text" => text} | _]} <- payload,
+         # TODO: handle case where jason.decode will fail and return {:error, reason}
          {:ok, %{"data" => jobs}} <- Jason.decode(text) do
       {:ok, Enum.map(jobs, fn job -> job["detailsPageUrl"] end)}
     else
@@ -212,11 +213,26 @@ defmodule JobHuntingEx.Queries.Data do
     []
   end
 
+  def process(%{
+        "keyword" => keyword,
+        "minimum_years_of_experience" => min,
+        "maximum_years_of_experience" => max
+      })
+      when keyword == "" or min == "" or max == "" do
+    Logger.error("Query is malformed")
+    {:error, "Query is malformed"}
+  end
+
   def process(params) do
-    {myoe, _remainder} = Integer.parse(params["minimum_years_of_experience"])
+    IO.inspect(params)
+    {min_yoe, _remainder} = Integer.parse(params["minimum_years_of_experience"])
+    {max_yoe, _remainder} = Integer.parse(params["maximum_years_of_experience"])
 
     params_modified =
       Map.filter(params, fn {key, _value} -> key != "minimum_years_of_experience" end)
+      |> Map.filter(fn {key, _value} -> key != "maximum_years_of_experience" end)
+
+    IO.inspect(params_modified)
 
     result =
       with {:ok, urls} <- fetch_urls(params_modified) do
@@ -286,7 +302,9 @@ defmodule JobHuntingEx.Queries.Data do
           # throw away all errors for now
           {:error, _struct} -> []
         end)
-        |> Enum.filter(fn listing -> listing.years_of_experience <= myoe + 1 end)
+        |> Enum.filter(fn listing ->
+          listing.years_of_experience >= min_yoe && listing.years_of_experience <= max_yoe
+        end)
       else
         {:error, err} ->
           Logger.error("Could not query Dice MCP", "reason: #{err}")

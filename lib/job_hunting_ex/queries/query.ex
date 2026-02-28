@@ -8,6 +8,7 @@ defmodule JobHuntingEx.Queries.Query do
     field :posted_date, :string
     field :workplace_types, {:array, :string}
     field :minimum_years_of_experience, :integer
+    field :maximum_years_of_experience, :integer
   end
 
   def changeset(query, params \\ %{}) do
@@ -18,8 +19,13 @@ defmodule JobHuntingEx.Queries.Query do
       :radius,
       :posted_date,
       :workplace_types,
-      :minimum_years_of_experience
+      :minimum_years_of_experience,
+      :maximum_years_of_experience
     ])
-    |> Ecto.Changeset.validate_required([:keyword])
+    |> Ecto.Changeset.validate_required([
+      :keyword,
+      :minimum_years_of_experience,
+      :maximum_years_of_experience
+    ])
   end
 end

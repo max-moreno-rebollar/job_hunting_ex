@@ -56,12 +56,20 @@ defmodule JobHuntingExWeb.QueryLive.New do
                   placeholder="e.g. 25"
                 />
               </div>
-              <.input
-                field={@form[:minimum_years_of_experience]}
-                type="text"
-                label="Min. Experience (years)"
-                placeholder="e.g. 3"
-              />
+              <div class="grid grid-cols-2 gap-4">
+                <.input
+                  field={@form[:minimum_years_of_experience]}
+                  type="text"
+                  label="Min. Experience (years)"
+                  placeholder="e.g. 1"
+                />
+                <.input
+                  field={@form[:maximum_years_of_experience]}
+                  type="text"
+                  label="Max. Experience (years)"
+                  placeholder="e.g. 15"
+                />
+              </div>
             </div>
 
             <.button
@@ -93,7 +101,9 @@ defmodule JobHuntingExWeb.QueryLive.New do
               <.icon name="hero-exclamation-triangle" class="w-6 h-6 text-red-500" />
             </div>
             <p class="text-gray-900 font-semibold">Something went wrong</p>
-            <p class="text-gray-500 text-sm mt-1">Failed to load listings. Please try again.</p>
+            <p class="text-gray-500 text-sm mt-1">
+              Failed to load listings. Please try again.
+            </p>
           </div>
         </:failed>
 
@@ -106,8 +116,7 @@ defmodule JobHuntingExWeb.QueryLive.New do
               navigate="/new"
               class="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
             >
-              <.icon name="hero-arrow-left" class="w-4 h-4 mr-1" />
-              New search
+              <.icon name="hero-arrow-left" class="w-4 h-4 mr-1" /> New search
             </.link>
           </div>
 
@@ -122,10 +131,15 @@ defmodule JobHuntingExWeb.QueryLive.New do
                   <p class="text-sm font-medium text-gray-900 group-hover:text-gray-600 transition-colors truncate">
                     {listing.url}
                   </p>
-                  <.icon name="hero-arrow-top-right-on-square" class="w-4 h-4 text-gray-300 group-hover:text-gray-500 shrink-0 transition-colors" />
+                  <.icon
+                    name="hero-arrow-top-right-on-square"
+                    class="w-4 h-4 text-gray-300 group-hover:text-gray-500 shrink-0 transition-colors"
+                  />
                 </div>
 
-                <p class="text-sm text-gray-500 leading-relaxed line-clamp-2 mb-3">{listing.summary}</p>
+                <p class="text-sm text-gray-500 leading-relaxed line-clamp-2 mb-3">
+                  {listing.summary}
+                </p>
 
                 <div class="flex flex-wrap items-center gap-1.5">
                   <span class="inline-flex items-center gap-1 text-xs font-medium text-gray-700 bg-gray-100 px-2 py-0.5 rounded-md">
@@ -171,6 +185,22 @@ defmodule JobHuntingExWeb.QueryLive.New do
       |> assign(:view, :show)
       |> assign(:listings, AsyncResult.loading())
       |> start_async(:query, fn -> Data.process(query_params) end)
+
+    {:noreply, socket}
+  end
+
+  def handle_async(:query, {:ok, {:error, reason}}, socket) do
+    %{listings: listings} = socket.assigns
+
+    socket =
+      socket
+      |> assign(
+        :listings,
+        AsyncResult.failed(
+          listings,
+          {:exit, assign(socket, :listings, AsyncResult.failed(listings, {:exit, reason}))}
+        )
+      )
 
     {:noreply, socket}
   end
