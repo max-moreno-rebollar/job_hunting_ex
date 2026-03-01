@@ -206,9 +206,10 @@ defmodule JobHuntingEx.Queries.Data do
   def process(%{
         "keyword" => keyword,
         "minimum_years_of_experience" => min,
-        "maximum_years_of_experience" => max
+        "maximum_years_of_experience" => max,
+        "radius" => radius
       })
-      when keyword == "" or min == "" or max == "" do
+      when keyword == "" or min == "" or max == "" or radius == "" do
     Logger.error("Query is malformed")
     {:error, "Query is malformed"}
   end
