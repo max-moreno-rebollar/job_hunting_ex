@@ -118,7 +118,7 @@ defmodule JobHuntingExWeb.QueryLive.New do
               {length(listings)} {if length(listings) == 1, do: "result", else: "results"}
             </h2>
             <.link
-              navigate="/new"
+              navigate="/"
               class="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-900 transition-colors"
             >
               <.icon name="hero-arrow-left" class="w-4 h-4 mr-1" /> New search
